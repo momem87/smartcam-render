@@ -1,0 +1,10 @@
+[Unit]
+Description=SmartCam Wi-Fi Reconnect Watchdog
+After=NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/smartcam-wifi-watchdog.sh
+User=root
+

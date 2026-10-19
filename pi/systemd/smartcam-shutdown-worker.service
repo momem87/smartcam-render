@@ -1,0 +1,14 @@
+[Unit]
+Description=SmartCam Safe Shutdown Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/smartcam-shutdown-worker.sh
+Restart=always
+RestartSec=5
+User=root
+
+[Install]
+WantedBy=multi-user.target

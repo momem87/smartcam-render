@@ -1,0 +1,18 @@
+# اختياري: لو استخدمت Blueprint في Render
+services:
+  - type: web
+    name: smartcam
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: API_KEY          # مفتاح الـ Pi (هتنسخه من Render وتحطه على الـ Pi)
+        generateValue: true
+      - key: DASH_PASSWORD    # باسورد فتح لوحة التحكم (اليوزر أي اسم)
+        generateValue: true
+      - key: SHUTDOWN_PIN     # رقم إيقاف الـ Pi - اكتبه بنفسك
+        sync: false

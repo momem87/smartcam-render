@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SmartCam wifi-watchdog every 10 seconds
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=10
+AccuracySec=1
+Unit=smartcam-wifi-watchdog.service
+
+[Install]
+WantedBy=timers.target

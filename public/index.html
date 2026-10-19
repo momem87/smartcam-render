@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>SmartCam</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root {
+--bg1:#06111f; --bg2:#1d0b2f; --card:#111827cc; --border:#334155;
+--text:#f8fafc; --muted:#b6c2d6; --green:#34d399; --yellow:#fbbf24; --red:#ef4444;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:Arial,sans-serif;background:radial-gradient(circle at 20% 0%,#10233f,var(--bg1) 40%,#080b14),radial-gradient(circle at 90% 10%,#331451,var(--bg2));color:var(--text)}
+.page{max-width:980px;margin:0 auto;padding:26px 16px 60px}
+h1{text-align:center;font-size:26px;margin:0 0 18px;text-shadow:0 2px 8px #000}
+.remote-panel,.camera-card{background:linear-gradient(180deg,rgba(17,24,39,.92),rgba(15,23,42,.92));border:1px solid var(--border);border-radius:18px;box-shadow:0 20px 70px rgba(0,0,0,.25);padding:18px;margin-bottom:18px}
+.remote-panel{text-align:center}
+.status-line{font-size:16px;line-height:1.5;color:var(--muted)}
+.status-line b{color:#fff;font-size:18px}
+.connected{color:var(--green)!important;font-weight:900}
+.log-line{font-size:13px;color:#cbd5e1;margin-top:6px}
+.health-wrap{margin-top:12px;background:rgba(255,255,255,.08);border:1px solid rgba(148,163,184,.25);height:16px;border-radius:999px;overflow:hidden}
+.health-fill{height:100%;width:100%;background:linear-gradient(90deg,#34d399,#22c55e);border-radius:999px;transition:.3s}
+.health-text{text-align:center;font-size:13px;font-weight:800;margin-top:7px;color:#d1fae5}
+.camera-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;margin-bottom:10px}
+.camera-head h2{margin:0;font-size:26px}.sub{font-size:13px;color:var(--muted)}
+.badge{padding:9px 16px;border-radius:999px;border:1px solid rgba(52,211,153,.45);background:rgba(16,185,129,.12);color:#d1fae5;font-weight:900}
+img{max-width:100%;display:block}
+#live,#capturePreview{width:100%;border-radius:14px;background:#020617;border:1px solid #1f2937}
+.controls-bar{display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;margin-top:14px}
+.ctrl-btn,.mode-select{height:48px;width:155px;min-width:155px;padding:0 14px;border-radius:14px;border:0;font-size:15px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;text-align:center;white-space:nowrap;text-decoration:none;cursor:pointer;color:#fff}
+.ctrl-btn{background:linear-gradient(135deg,#6674ff,#e23bae);box-shadow:0 12px 28px rgba(126,87,255,.25)}
+.danger-btn{background:linear-gradient(135deg,#ef4444,#991b1b)!important;box-shadow:0 12px 28px rgba(239,68,68,.25)!important}
+.mode-box{width:155px;min-width:155px;display:flex;flex-direction:column;gap:6px;margin:0;color:var(--muted);font-size:12px;font-weight:800}
+.mode-select{background:rgba(255,255,255,.08);color:var(--text);border:1px solid rgba(148,163,184,.28);outline:none}
+.mode-select option{background:#111827;color:#fff}
+.controls-status{margin-top:10px;font-size:14px;font-weight:800;color:#d8b4fe}
+.status-text{font-size:12px;color:var(--muted);margin-top:7px}
+.remote-buttons{display:none}
+@media(max-width:768px){
+.page{width:100%;padding:12px 10px 40px}.remote-panel,.camera-card{border-radius:20px;padding:14px}
+h1{font-size:22px}.status-line{font-size:14px}.status-line b{font-size:15px}
+.camera-head h2{font-size:28px}.controls-bar{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ctrl-btn,.mode-box,.mode-select{width:100%;min-width:0}.mode-box{grid-column:1/-1}.controls-status{text-align:center}
+}
+@media(max-width:420px){.controls-bar{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="page">
+<h1>SmartCam Remote Control</h1>
+<section class="remote-panel">
+<div class="status-line">
+Last access: <b id="lastAccess">...</b> - Transmitted data: <b id="txData">...</b>
+</div>
+<div class="status-line">
+Temperature: <b id="tempText">...</b> - Latency: <b id="latencyText">...</b> - Signal: <b id="signalText">...</b> - Current state: <b class="connected" id="stateText">...</b>
+</div>
+<div class="status-line">
+Local IP: <b id="localIp">...</b> - Wi‑Fi: <b id="wifiText">...</b> - Last live: <b id="lastLive">...</b>
+</div>
+<div class="log-line">Log: <span id="logText">Loading...</span></div>
+<div class="health-wrap"><div class="health-fill" id="liveHealthFill"></div></div>
+<div class="health-text" id="liveHealthText">Live health: checking...</div>
+</section>
+<section class="camera-card">
+<div class="camera-head">
+<div><h2>Live</h2><div class="sub">Snapshot stream</div></div>
+<div class="badge" id="serverBadge">• Server Online</div>
+</div>
+<img id="live" src="/captures/mini.jpg?t=init" alt="Live snapshot">
+<div class="controls controls-bar">
+<button class="ctrl-btn" id="captureBtn" onclick="requestCapture()">Capture Image</button>
+<label class="mode-box"><span>Capture Mode</span>
+<select id="capturePreset" class="mode-select">
+<option value="original">Original</option>
+<option value="screen">Screen</option>
+<option value="low_light">Low Light</option>
+<option value="warm">Warm</option>
+</select>
+</label>
+<a class="ctrl-btn" id="downloadCapture" href="/captures/capture.jpg?t=init" download="smartcam-capture.jpg">Download</a>
+<button class="ctrl-btn danger-btn" id="shutdownBtnLive" onclick="requestShutdown()">Shutdown Pi</button>
+</div>
+<div class="controls-status capture-line" id="captureStatus">Ready.</div>
+<div class="status-text">Live frame: <span id="frameNo">0</span> | <span id="clockText">--:--:--</span></div>
+</section>
+<section class="camera-card">
+<div class="camera-head"><div><h2>Last Image</h2><div class="sub">Last HD capture</div></div></div>
+<img id="capturePreview" src="/captures/capture.jpg?t=init" alt="Last HD capture">
+</section>
+</div>
+<script>
+const liveEl = document.getElementById('live');
+const capturePreviewEl = document.getElementById('capturePreview');
+const captureBtn = document.getElementById('captureBtn');
+const capturePresetEl = document.getElementById('capturePreset');
+const captureStatusEl = document.getElementById('captureStatus');
+const frameNoEl = document.getElementById('frameNo');
+const clockTextEl = document.getElementById('clockText');
+const serverBadgeEl = document.getElementById('serverBadge');
+const lastAccessEl = document.getElementById('lastAccess');
+const txDataEl = document.getElementById('txData');
+const tempTextEl = document.getElementById('tempText');
+const latencyTextEl = document.getElementById('latencyText');
+const signalTextEl = document.getElementById('signalText');
+const stateTextEl = document.getElementById('stateText');
+const localIpEl = document.getElementById('localIp');
+const wifiTextEl = document.getElementById('wifiText');
+const lastLiveEl = document.getElementById('lastLive');
+const logTextEl = document.getElementById('logText');
+const liveHealthFillEl = document.getElementById('liveHealthFill');
+const liveHealthTextEl = document.getElementById('liveHealthText');
+let frame = 0;
+function formatSecondsAgo(s) {
+if (s === null || s === undefined) return 'N/A';
+if (s <= 1) return 'now';
+return s + ' seconds ago';
+}
+function updateLiveHealth(ageSeconds, connected) {
+if (!connected || ageSeconds === null || ageSeconds === undefined) {
+liveHealthFillEl.style.width = '100%';
+liveHealthFillEl.style.background = 'linear-gradient(90deg,#ef4444,#991b1b)';
+liveHealthTextEl.style.color = '#fecaca';
+liveHealthTextEl.textContent = 'Live health: OFFLINE / no recent image';
+return;
+}
+ageSeconds = Number(ageSeconds);
+if (ageSeconds <= 20) {
+liveHealthFillEl.style.width = '100%';
+liveHealthFillEl.style.background = 'linear-gradient(90deg,#34d399,#22c55e)';
+liveHealthTextEl.style.color = '#d1fae5';
+liveHealthTextEl.textContent = 'Live health: GOOD · last frame ' + formatSecondsAgo(ageSeconds);
+} else if (ageSeconds <= 40) {
+liveHealthFillEl.style.width = '65%';
+liveHealthFillEl.style.background = 'linear-gradient(90deg,#fbbf24,#f59e0b)';
+liveHealthTextEl.style.color = '#fde68a';
+liveHealthTextEl.textContent = 'Live health: DELAYED · last frame ' + formatSecondsAgo(ageSeconds);
+} else {
+liveHealthFillEl.style.width = '35%';
+liveHealthFillEl.style.background = 'linear-gradient(90deg,#ef4444,#991b1b)';
+liveHealthTextEl.style.color = '#fecaca';
+liveHealthTextEl.textContent = 'Live health: STALLED · last frame ' + formatSecondsAgo(ageSeconds);
+}
+}
+function capturePhaseText(data) {
+const status = data.status || 'working';
+const message = data.message || '';
+if (status === 'requested') return '📩 Request received...';
+if (status === 'pausing_live') return '⏸ Pausing live stream...';
+if (status === 'capturing') return '📸 Taking HD capture...';
+if (status === 'uploading') return '☁️ Uploading image...';
+if (status === 'done') return '✅ Done.';
+if (status === 'error') return '⚠️ ' + (message || 'Capture error');
+if (message) return message;
+return 'Working...';
+}
+function loadNext() {
+frame++;
+liveEl.src = '/captures/mini.jpg?t=' + Date.now();
+frameNoEl.textContent = frame;
+clockTextEl.textContent = new Date().toLocaleTimeString();
+setTimeout(loadNext, 1000);
+}
+function loadCapturePreview() {
+capturePreviewEl.src = '/captures/capture.jpg?t=' + Date.now();
+downloadCapture.href = '/captures/capture.jpg?t=' + Date.now();
+}
+async function refreshStatus() {
+try {
+const res = await fetch('/api/status?t=' + Date.now());
+const data = await res.json();
+const connected = data.current_state === 'Connected';
+lastAccessEl.textContent = formatSecondsAgo(data.last_access_seconds_ago);
+txDataEl.textContent = data.transmitted_human || '0 B';
+tempTextEl.textContent = data.temperature || 'N/A';
+latencyTextEl.textContent = data.latency || 'N/A';
+signalTextEl.textContent = data.signal || 'N/A';
+stateTextEl.textContent = data.current_state || 'N/A';
+localIpEl.textContent = data.local_ip || 'N/A';
+wifiTextEl.textContent = data.ssid || 'N/A';
+lastLiveEl.textContent = formatSecondsAgo(data.mini_age_seconds);
+logTextEl.textContent = data.log || '';
+serverBadgeEl.textContent = connected ? '• Server Online' : '• Server Offline';
+updateLiveHealth(data.mini_age_seconds, connected);
+} catch (e) {}
+}
+async function requestCapture() {
+captureBtn.disabled = true;
+captureStatusEl.textContent = 'Requesting...';
+const preset = capturePresetEl ? capturePresetEl.value : 'original';
+try {
+await fetch('/api/capture-request', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body: JSON.stringify({preset:preset})
+});
+setTimeout(waitCaptureDone, 500);
+} catch (e) {
+captureStatusEl.textContent = 'Request error.';
+captureBtn.disabled = false;
+}
+}
+async function waitCaptureDone() {
+try {
+const res = await fetch('/api/capture-status?t=' + Date.now());
+const data = await res.json();
+captureStatusEl.textContent = capturePhaseText(data);
+if (data.status === 'done' || data.status === 'error') {
+loadCapturePreview();
+refreshStatus();
+captureBtn.disabled = false;
+return;
+}
+setTimeout(waitCaptureDone, 500);
+} catch (e) {
+captureStatusEl.textContent = 'Status error.';
+captureBtn.disabled = false;
+}
+}
+async function requestShutdown() {
+const pin = prompt('Enter shutdown PIN');
+if (!pin) return;
+const confirmShutdown = confirm('Shutdown Raspberry Pi safely now?');
+if (!confirmShutdown) return;
+try {
+const res = await fetch('/api/pi-shutdown-request', {
+method:'POST',
+headers:{'Content-Type':'application/json'},
+body: JSON.stringify({pin:pin})
+});
+const data = await res.json();
+if (!data.ok) {
+alert('Shutdown failed: ' + (data.error || 'Unknown error'));
+return;
+}
+alert('Shutdown request sent. The Raspberry Pi should power off safely in a few seconds.');
+logTextEl.textContent = 'Shutdown request sent to Raspberry Pi.';
+} catch (e) {
+alert('Shutdown request error.');
+}
+}
+loadNext();
+loadCapturePreview();
+refreshStatus();
+setInterval(refreshStatus, 1000);
+</script>
+</body>
+</html>

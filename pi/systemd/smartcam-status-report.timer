@@ -1,0 +1,11 @@
+[Unit]
+Description=Run SmartCam status-report every 10 seconds
+
+[Timer]
+OnBootSec=15
+OnUnitActiveSec=10
+AccuracySec=1
+Unit=smartcam-status-report.service
+
+[Install]
+WantedBy=timers.target
